@@ -15,13 +15,13 @@ export default function StorePage() {
   const products: Products[] = [
     {
       id: 1,
-      name: "Product 1",
-      price: 19.99,
+      name: "Hoodie",
+      price: 59.99,
       image: "/product1.jpg"
     },
     {
       id: 2,
-      name: "Product 2",
+      name: "Shirt",
       price: 29.99,
       image: "/product2.jpg"  
     },
@@ -51,18 +51,23 @@ export default function StorePage() {
   };
 
   return (
-    <main className="min-h-screen bg-grey text-slate-900 pb-20">
+    <main className="min-h-screen bg-white text-slate-900 pb-20">
       {/* Navbar */}
       <nav className="bg-white border-b p-4 sticky top-0 z-10 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-black tracking-tighter">ThreadTheory</h1>
+        <div className = "font-black, size-1.5"> Search </div>
+        <div className = "font-black, size-1.5 "><a href="/Product/SpringCollection/">Spring Collection</a> </div>
+        <div className = "font-black, size-1.5"><a href="/Sale/SalePage/">Sale</a></div>
+        <div className = "font-black, size - 1.5"><a href="/About/AboutPage">About</a></div>
+        <div className = "font-black, size-1.5 "><a href="/Account/AccountPage">Account</a></div>
         <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold">
-          🛒 Cart ({cart.length})
+          <a href="/Cart/CartPage">🛒 Cart ({cart.length})</a>
         </div>
       </nav>
 
       {/* Hero */}
       <header className="py-16 px-4 text-center">
-        <h2 className="text-5xl font-extrabold mb-4 text-white">Hottest Drops</h2>
+        <h2 className="text-5xl font-extrabold mb-4 text-black">Collection</h2>
         <p className="text-slate-500">Quality goods delivered to your door.</p>
       </header>
 
