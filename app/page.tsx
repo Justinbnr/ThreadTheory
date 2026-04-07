@@ -20,7 +20,6 @@ export default function Home() {
       </header>
       
       {/* This is where we will have a sign in button that will take the user to view the nav bar */}
-
     </main>
   );
 }
