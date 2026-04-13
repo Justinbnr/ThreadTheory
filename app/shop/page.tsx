@@ -1,93 +1,135 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabase"; 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-interface Products{
+interface Product {
   id: number;
   name: string;
   price: number;
   image: string;
+  category: string;
 }
 
 export default function StorePage() {
-  const [cart, setCart] = useState<Products[]>([]);
-  
-  const products: Products[] = [
-    {
-      id: 1,
-      name: "Product 1",
-      price: 19.99,
-      image: "/product1.jpg"
-    },
-    {
-      id: 2,
-      name: "Product 2",
-      price: 29.99,
-      image: "/product2.jpg"  
-    },
-    {
-      id: 3,
-      name: "Product 3",
-      price: 39.99,
-      image: "/product3.jpg"
-    },
-    {
-      id: 4,
-      name: "Product 4",
-      price: 49.99,
-      image: "/product4.jpg"
-    },
-    {
-      id: 5,
-      name: "Product 5",
-      price: 59.99,
-      image: "/product5.jpg"
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const pathname = usePathname();
+
+  // Load cart from local storage
+  useEffect(() => {
+    const savedCart = localStorage.getItem("threadtheory_cart");
+    if (savedCart) setCart(JSON.parse(savedCart));
+  }, []);
+
+  // Save cart whenever it changes
+  useEffect(() => {
+    localStorage.setItem("threadtheory_cart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    async function getProducts() {
+      try {
+        const { data, error } = await supabase.from("products").select("*");
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (error) {
+        console.error("Error loading products:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
-  
-  const addToCart = (product: Products) => {
+    getProducts();
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchTerm, selectedCategory, products]);
+
+  const addToCart = (product: Product) => {
     setCart([...cart, product]);
-    console.log(`Added ${product.name} to cart!`);
   };
 
+  if (loading) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <p className="text-xs font-bold uppercase tracking-[0.4em] animate-pulse text-black">Loading Theory...</p>
+    </div>
+  );
+
   return (
-    <main className="min-h-screen bg-white text-slate-900 pb-20">
-      {/* Navbar */}
-      <nav className="bg-white border-b p-4 sticky top-0 z-10 flex justify-between items-center shadow-sm">
-        <h1 className="text-2xl font-black tracking-tighter">ThreadTheory</h1>
-        <div className="flex space-x-4">
-    
-          <Link href="/shop" className="text-slate-500 hover:text-slate-900 transition-colors">Shop</Link>
-          <Link href="/about" className="text-slate-500 hover:text-slate-900 transition-colors">About</Link>
-          <Link href="/contact" className="text-slate-500 hover:text-slate-900 transition-colors">Contact</Link>
-          <Link href="/Home" className="text-slate-500 hover:text-slate-900 transition-colors">Sign Out</Link>
+    <main className="min-h-screen bg-white text-slate-900 font-sans selection:bg-black selection:text-white relative">
+      
+      {/* --- NAVBAR --- */}
+      <nav className="px-8 py-6 bg-white border-b border-slate-50 sticky top-0 z-40 flex justify-between items-center">
+        <Link href="/">
+          <h1 className="text-sm font-black uppercase tracking-tighter italic cursor-pointer text-black">ThreadTheory</h1>
+        </Link>
+        <div className="flex gap-10">
+          <Link href="/shop" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/shop' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Shop</Link>
+          <Link href="/admin" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/admin' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Admin</Link>
         </div>
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold">
-          🛒 Cart ({cart.length})
-        </div>
+        
+        {/* DIRECT LINK TO CHECKOUT */}
+        <Link href="/checkout" className="text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-black pb-0.5">
+          Checkout ({cart.length})
+        </Link>
       </nav>
 
-      {/* Hero */}
-      <header className="py-16 px-4 text-center">
-        <h2 className="text-5xl font-extrabold mb-4 text-black">Hottest Drops</h2>
-        <p className="text-slate-500">Quality goods delivered to your door.</p>
-      </header>
+      {/* --- FILTERS & SEARCH --- */}
+      <section className="px-8 py-10 max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex gap-6 overflow-x-auto no-scrollbar w-full md:w-auto">
+          {["All", "Apparel", "Accessories", "Footwear"].map((cat) => (
+            <button 
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 whitespace-nowrap ${
+                selectedCategory === cat ? 'border-b-2 border-black text-black' : 'text-slate-300 hover:text-slate-900'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        
+        <input 
+          type="text" 
+          placeholder="SEARCH"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="bg-slate-50 border border-slate-100 rounded-full px-6 py-2 text-[10px] font-bold uppercase tracking-widest outline-none focus:border-black w-full md:w-48 transition-all"
+        />
+      </section>
 
-      {/* Product Grid */}
-      <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <div key={product.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow">
-            <img src={product.image} alt={product.name} className="w-full h-48 object-cover bg-slate-200" />
-            <div className="p-6">
-              <h3 className="text-xl font-bold mb-2">{product.name}</h3>
-              <p className="text-blue-600 font-bold text-lg mb-4">${product.price.toFixed(2)}</p>
+      {/* --- PRODUCT GRID --- */}
+      <div className="max-w-6xl mx-auto px-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-12 gap-x-6 pb-32">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className="group flex flex-col">
+            <div className="relative aspect-[3/4] w-full max-h-[400px] bg-slate-50 overflow-hidden mb-3 border border-slate-100">
+              <img 
+                src={product.image} 
+                alt={product.name} 
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" 
+              />
               <button 
                 onClick={() => addToCart(product)}
-                className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-blue-600 transition-colors"
+                className="absolute bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm text-black border-t border-slate-100 py-3 text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 hover:bg-black hover:text-white z-10"
               >
-                Add to Cart
+                Add to Bag
               </button>
+            </div>
+            
+            <div className="space-y-0.5 text-black">
+              <h3 className="text-[11px] font-bold uppercase tracking-tight leading-tight">{product.name}</h3>
+              <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{product.category}</p>
+              <p className="text-[11px] font-black pt-1">${product.price.toFixed(2)}</p>
             </div>
           </div>
         ))}

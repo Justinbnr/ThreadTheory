@@ -10,6 +10,10 @@ export default function Home() {
       {/* Navbar */}
       <nav className="bg-white border-b p-4 sticky top-0 z-10 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-black tracking-tighter">ThreadTheory</h1>
+        <div>
+          <Link href="/shop" className="text-sm font-medium text-slate-700 hover:text-slate-900">Shop</Link>
+          <Link href="/admin" className="text-sm font-medium text-slate-700 hover:text-slate-900">Sign In</Link>
+        </div>
       </nav>
 
       {/* Hero */}
