@@ -23,7 +23,7 @@ export default function AdminPage() {
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || user.email !== "admin@threadtheory.com") {
-      router.push("/login");
+      router.push("/admin/login");
       return;
     }
 

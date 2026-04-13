@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase"; 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface Product {
   id: number;
@@ -18,7 +18,22 @@ export default function StorePage() {
   const [cart, setCart] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
 
   // Load cart from local storage
   useEffect(() => {
@@ -74,7 +89,11 @@ export default function StorePage() {
         </Link>
         <div className="flex gap-10">
           <Link href="/shop" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/shop' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Shop</Link>
-          <Link href="/admin" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/admin' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Admin</Link>
+          {user ? (
+            <button onClick={handleSignOut} className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-red-500 transition-colors">Sign Out</button>
+          ) : (
+            <Link href="/login" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/login' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Sign In</Link>
+          )}
         </div>
         
         {/* DIRECT LINK TO CHECKOUT */}
@@ -111,7 +130,7 @@ export default function StorePage() {
       {/* --- PRODUCT GRID --- */}
       <div className="max-w-6xl mx-auto px-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-12 gap-x-6 pb-32">
         {filteredProducts.map((product) => (
-          <div key={product.id} className="group flex flex-col">
+          <div key={`product-${product.id}-${product.name}`} className="group flex flex-col">
             <div className="relative aspect-[3/4] w-full max-h-[400px] bg-slate-50 overflow-hidden mb-3 border border-slate-100">
               <img 
                 src={product.image} 

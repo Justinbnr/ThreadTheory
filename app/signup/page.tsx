@@ -4,26 +4,31 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setMessage("");
 
-    // Block admin from using customer login
-    if (email === "admin@threadtheory.com") {
-      setMessage("Please use the admin portal to sign in.");
-      setLoading(false);
+    if (password !== confirmPassword) {
+      setMessage("Passwords do not match.");
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (password.length < 6) {
+      setMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       setMessage(error.message);
@@ -37,7 +42,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-white text-slate-900 p-6 font-sans selection:bg-black selection:text-white">
       <div className="w-full max-w-sm">
 
-        {/* Back to home */}
+        {/* Back */}
         <Link href="/" className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-black transition-colors mb-12 block">
           ← Back
         </Link>
@@ -47,10 +52,10 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">
             ThreadTheory
           </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Member Sign In</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Create Account</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleSignup} className="space-y-5">
           <input
             type="email"
             placeholder="Email Address"
@@ -69,19 +74,21 @@ export default function LoginPage() {
             required
           />
 
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-medium focus:bg-white focus:border-slate-300 transition-all"
+            required
+          />
+
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-black text-white py-5 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all active:scale-[0.98] disabled:bg-slate-300"
           >
-            {loading ? "Verifying..." : "Sign In"}
-          </button>
-
-          <button
-            type="button"
-            className="w-full text-slate-400 py-2 text-[10px] font-bold uppercase tracking-widest hover:text-black transition-all"
-          >
-            Request Access
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
@@ -91,22 +98,12 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* Sign up link */}
+        {/* Already have account */}
         <div className="mt-12 pt-8 border-t border-slate-100 text-center">
           <p className="text-[9px] font-bold uppercase tracking-widest text-slate-300">
-            No account?{" "}
-            <Link href="/signup" className="text-black hover:underline">
-              Create One →
-            </Link>
-          </p>
-        </div>
-
-        {/* Admin link */}
-        <div className="mt-4 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-300">
-            Staff?{" "}
-            <Link href="/admin/login" className="text-black hover:underline">
-              Admin Portal →
+            Already have an account?{" "}
+            <Link href="/login" className="text-black hover:underline">
+              Sign In →
             </Link>
           </p>
         </div>
