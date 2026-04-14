@@ -1,8 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/lib/supabase"; 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Product {
   id: number;
@@ -12,189 +11,134 @@ interface Product {
   category: string;
 }
 
-export default function StorePage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function CheckoutPage() {
   const [cart, setCart] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [user, setUser] = useState<any>(null);
-  const [addedId, setAddedId] = useState<string | null>(null);
-  const pathname = usePathname();
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
-  // Load cart from local storage
-  useEffect(() => {
     const savedCart = localStorage.getItem("threadtheory_cart");
-    if (savedCart) setCart(JSON.parse(savedCart));
-  }, []);
-
-  // Save cart whenever it changes
-  useEffect(() => {
-    localStorage.setItem("threadtheory_cart", JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
-    async function getProducts() {
-      try {
-        setError(null);
-        const { data, error } = await supabase.from("products").select("*");
-        if (error) throw error;
-        setProducts(data || []);
-      } catch (err: any) {
-        console.error("Error loading products:", err);
-        setError("Failed to load products. Please try again.");
-      } finally {
-        setLoading(false);
-      }
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
     }
-    getProducts();
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [searchTerm, selectedCategory, products]);
-
-  const addToCart = (product: Product) => {
-    setCart([...cart, product]);
-    // Show brief "Added" confirmation
-    const key = `${product.id}-${product.name}`;
-    setAddedId(key);
-    setTimeout(() => setAddedId(null), 1500);
+  const removeFromCart = (indexToRemove: number) => {
+    setCart(cart.filter((_, i) => i !== indexToRemove));
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <p className="text-xs font-bold uppercase tracking-[0.4em] animate-pulse text-black">Loading Theory...</p>
-    </div>
-  );
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
 
-  // ERROR STATE
-  if (error) return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-6 px-8 text-center">
-      <div className="w-16 h-16 border-2 border-red-100 rounded-full flex items-center justify-center">
-        <span className="text-2xl">✕</span>
-      </div>
-      <h2 className="text-2xl font-black uppercase italic tracking-tighter">Something went wrong</h2>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{error}</p>
-      <button
-        onClick={() => { setLoading(true); setError(null); window.location.reload(); }}
-        className="bg-black text-white px-12 py-4 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-slate-800 transition-all"
-      >
-        Try Again
-      </button>
-    </div>
-  );
+  const handleCompleteOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cart.length === 0) return;
+    setLoading(true);
+    localStorage.setItem("last_order_total", total.toFixed(2));
+    
+    setTimeout(() => {
+      setLoading(false);
+      localStorage.removeItem("threadtheory_cart");
+      router.push("/success");
+    }, 2000);
+  };
 
   return (
-    <main className="min-h-screen bg-white text-slate-900 font-sans selection:bg-black selection:text-white relative">
+    <main className="min-h-screen bg-white text-black flex flex-col lg:flex-row font-sans selection:bg-black selection:text-white">
       
-      {/* --- NAVBAR --- */}
-      <nav className="px-8 py-6 bg-white border-b border-slate-50 sticky top-0 z-40 flex justify-between items-center">
-        <Link href="/">
-          <h1 className="text-sm font-black uppercase tracking-tighter italic cursor-pointer text-black">ThreadTheory</h1>
+      {/* LEFT SIDE: Shipping Information */}
+      <div className="flex-1 px-8 py-12 lg:px-20 border-r border-slate-50">
+        <Link href="/shop" className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-black transition-colors">
+          ← Back to Shop
         </Link>
-        <div className="flex gap-10">
-          <Link href="/shop" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/shop' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Shop</Link>
-          {user ? (
-            <>
-              <Link href="/orders" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-black transition-colors">Orders</Link>
-              <button onClick={handleSignOut} className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-red-500 transition-colors">Sign Out</button>
-            </>
+        
+        <div className="mt-12 max-w-md">
+          {cart.length === 0 ? (
+            /* EMPTY CART STATE */
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-16 h-16 border-2 border-slate-100 rounded-full flex items-center justify-center mb-6">
+                <span className="text-2xl">∅</span>
+              </div>
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-3">Bag is Empty</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-10">
+                You haven't added anything yet
+              </p>
+              <Link href="/shop">
+                <button className="bg-black text-white px-12 py-4 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-slate-800 transition-all active:scale-[0.98]">
+                  Browse Collection
+                </button>
+              </Link>
+            </div>
           ) : (
-            <Link href="/login" className={`text-[10px] font-bold uppercase tracking-[0.2em] ${pathname === '/login' ? 'text-black' : 'text-slate-300 hover:text-black'}`}>Sign In</Link>
+            /* SHIPPING FORM */
+            <form id="checkout-form" onSubmit={handleCompleteOrder}>
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] mb-8 text-black">Shipping Identity</h2>
+              <div className="space-y-4">
+                <input type="text" placeholder="FULL NAME" required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-none outline-none focus:border-black text-[10px] font-bold uppercase" />
+                <input type="email" placeholder="EMAIL ADDRESS" required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-none outline-none focus:border-black text-[10px] font-bold uppercase" />
+                <input type="text" placeholder="SHIPPING ADDRESS" required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-none outline-none focus:border-black text-[10px] font-bold uppercase" />
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" placeholder="CITY" required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-none outline-none focus:border-black text-[10px] font-bold uppercase" />
+                  <input type="text" placeholder="POSTAL CODE" required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-none outline-none focus:border-black text-[10px] font-bold uppercase" />
+                </div>
+              </div>
+            </form>
           )}
         </div>
-        
-        <Link href="/checkout" className="text-[10px] font-black uppercase tracking-[0.2em] text-black border-b border-black pb-0.5">
-          Checkout ({cart.length})
-        </Link>
-      </nav>
+      </div>
 
-      {/* --- FILTERS & SEARCH --- */}
-      <section className="px-8 py-10 max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex gap-6 overflow-x-auto no-scrollbar w-full md:w-auto">
-          {["All", "Apparel", "Accessories", "Footwear"].map((cat) => (
-            <button 
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all pb-1 whitespace-nowrap ${
-                selectedCategory === cat ? 'border-b-2 border-black text-black' : 'text-slate-300 hover:text-slate-900'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* RIGHT SIDE: Summary */}
+      <div className="lg:w-[450px] bg-slate-50 p-8 lg:p-12 flex flex-col">
+        <div className="flex-grow">
+          <h2 className="text-sm font-black uppercase tracking-[0.2em] mb-10 text-black border-b border-black pb-2">
+            Order Summary
+          </h2>
+          
+          <div className="space-y-6 mb-12 max-h-[40vh] overflow-y-auto pr-2 no-scrollbar">
+            {cart.length === 0 ? (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Bag Empty</p>
+            ) : (
+              cart.map((item, i) => (
+                <div key={i} className="flex justify-between items-start animate-in fade-in duration-500 group">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-tight text-black">{item.name}</p>
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
+                    {/* REMOVE BUTTON */}
+                    <button
+                      onClick={() => removeFromCart(i)}
+                      className="text-[8px] font-bold uppercase tracking-widest text-slate-300 hover:text-red-500 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <p className="text-[11px] font-black text-black">${item.price.toFixed(2)}</p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-        
-        <input 
-          type="text" 
-          placeholder="SEARCH"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="bg-slate-50 border border-slate-100 rounded-full px-6 py-2 text-[10px] font-bold uppercase tracking-widest outline-none focus:border-black w-full md:w-48 transition-all"
-        />
-      </section>
 
-      {/* --- NO RESULTS --- */}
-      {filteredProducts.length === 0 && !loading && (
-        <div className="text-center py-24">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">No products found</p>
-          <button onClick={() => { setSearchTerm(""); setSelectedCategory("All"); }} className="mt-4 text-[10px] font-black uppercase tracking-widest text-black hover:underline">
-            Clear Filters
-          </button>
-        </div>
-      )}
-
-      {/* --- PRODUCT GRID --- */}
-      <div className="max-w-6xl mx-auto px-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-12 gap-x-6 pb-32">
-        {filteredProducts.map((product) => {
-          const key = `product-${product.id}-${product.name}`;
-          const justAdded = addedId === key;
-          return (
-            <div key={key} className="group flex flex-col">
-              <div className="relative aspect-[3/4] w-full max-h-[400px] bg-slate-50 overflow-hidden mb-3 border border-slate-100">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" 
-                />
-                <button 
-                  onClick={() => addToCart(product)}
-                  className={`absolute bottom-0 left-0 w-full backdrop-blur-sm border-t border-slate-100 py-3 text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-10 ${
-                    justAdded ? "bg-black text-white" : "bg-white/95 text-black hover:bg-black hover:text-white"
-                  }`}
-                >
-                  {justAdded ? "✓ Added" : "Add to Bag"}
-                </button>
-              </div>
-              
-              <div className="space-y-0.5 text-black">
-                <h3 className="text-[11px] font-bold uppercase tracking-tight leading-tight">{product.name}</h3>
-                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">{product.category}</p>
-                <p className="text-[11px] font-black pt-1">${product.price.toFixed(2)}</p>
-              </div>
+        <div className="border-t-2 border-black pt-8 space-y-8">
+          <div className="flex justify-between items-baseline">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Total Due</span>
+              <span className="text-[9px] font-bold text-slate-300 uppercase italic">Taxes Included</span>
             </div>
-          );
-        })}
+            <span className="text-4xl font-black tracking-tighter text-black">${total.toFixed(2)}</span>
+          </div>
+
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={loading || cart.length === 0}
+            className="w-full py-6 rounded-none font-black uppercase tracking-[0.4em] text-[12px] transition-all active:scale-[0.98] border border-black bg-white text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {loading ? "Processing..." : "Authorize Transaction"}
+          </button>
+          
+          <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest text-center">
+            Finalize order to secure inventory
+          </p>
+        </div>
       </div>
     </main>
   );
