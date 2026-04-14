@@ -17,8 +17,7 @@ export default function Home() {
       <nav className="px-8 py-6 bg-white border-b border-slate-50 sticky top-0 z-40 flex justify-between items-center">
         <h1 className="text-sm font-black uppercase tracking-tighter italic text-black">ThreadTheory</h1>
         <div className="flex gap-10">
-          <Link href="/shop" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-black transition-colors">Shop</Link>
-          <Link href="/login" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-black transition-colors">Sign In</Link>
+
         </div>
       </nav>
 
