@@ -23,11 +23,6 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  // Save cart whenever it changes
-  useEffect(() => {
-    localStorage.setItem("threadtheory_cart", JSON.stringify(cart));
-  }, [cart]);
-
   const removeFromCart = (indexToRemove: number) => {
     setCart(cart.filter((_, i) => i !== indexToRemove));
   };
